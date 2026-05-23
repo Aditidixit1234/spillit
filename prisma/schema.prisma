@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  firebaseUid        String   @unique
+  username           String   @unique
+  email              String   @unique
+  anonName           String
+  avatar             String?
+  bio                String?
+  signature          String?
+  rep                Int      @default(0)
+  accuracy           Float    @default(0)
+  totalPredictions   Int      @default(0)
+  correctPredictions Int      @default(0)
+  wrongPredictions   Int      @default(0)
+  streak             Int      @default(0)
+  lastActiveDate     DateTime?
+  rank               Int?
+  aura               String   @default("oracle")
+  level              String   @default("Anonymous Rookie")
+  badges             String[] @default([])
+  anonLevel          String   @default("fully_anonymous")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  posts              Post[]
+  votes              Vote[]
+  comments           Comment[]
+  hearts             Heart[]
+  notifications      Notification[]
+  flags              Flag[]
+  moderationActions  ModerationAction[]
+}
+
+model Post {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  type          String
+  text          String
+  mediaUrl      String?
+  mediaType     String?
+  tags          String[] @default([])
+  mood          String?
+  anonLevel     String   @default("fully_anonymous")
+  audience      String   @default("For You")
+  isPoll        Boolean  @default(false)
+  options       Json?
+  deadline      DateTime?
+  revealed      Boolean  @default(false)
+  winningOption Int?
+  totalVotes    Int      @default(0)
+  totalHearts   Int      @default(0)
+  totalComments Int      @default(0)
+  repScore      Float    @default(0)
+  isTrending    Boolean  @default(false)
+  isViral       Boolean  @default(false)
+  status        String   @default("active")
+  reportCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  authorId      String   @db.ObjectId
+  author        User     @relation(fields: [authorId], references: [id])
+  votes         Vote[]
+  comments      Comment[]
+  hearts        Heart[]
+  flags         Flag[]
+}
+
+model Vote {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  optionIndex Int
+  createdAt   DateTime @default(now())
+  postId      String   @db.ObjectId
+  post        Post     @relation(fields: [postId], references: [id])
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  text        String
+  totalHearts Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  postId      String    @db.ObjectId
+  post        Post      @relation(fields: [postId], references: [id])
+  authorId    String    @db.ObjectId
+  author      User      @relation(fields: [authorId], references: [id])
+  parentId    String?   @db.ObjectId
+  replies     Comment[] @relation("CommentReplies")
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  hearts      Heart[]
+}
+
+model Heart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+  postId    String?  @db.ObjectId
+  post      Post?    @relation(fields: [postId], references: [id])
+  commentId String?  @db.ObjectId
+  comment   Comment? @relation(fields: [commentId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  title     String
+  body      String
+  icon      String?
+  color     String?
+  read      Boolean  @default(false)
+  repChange Int?
+  actionUrl String?
+  createdAt DateTime @default(now())
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Flag {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  reason     String
+  severity   String   @default("low")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  postId     String   @db.ObjectId
+  post       Post     @relation(fields: [postId], references: [id])
+  reporterId String   @db.ObjectId
+  reporter   User     @relation(fields: [reporterId], references: [id])
+}
+
+model ModerationAction {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  action    String
+  reason    String?
+  postId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  modId     String   @db.ObjectId
+  mod       User     @relation(fields: [modId], references: [id])
+}

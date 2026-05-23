@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const A = "#6c5ce7";
 const A2 = "#e84393";
@@ -134,14 +136,129 @@ function FeatCard({ theme = "purple", icon, pill, pillBg, pillColor, title, desc
   );
 }
 
+// ── Auth Screen with real Firebase ────────────────────────────────────────────
 function AuthScreen({ mode, setScreen }: { mode: string; setScreen: (s: string) => void }) {
   const isLogin = mode === "login";
-  const [email, setEmail] = useState(""); const [pass, setPass] = useState(""); const [user, setUser] = useState(""); const [err, setErr] = useState(false);
-  const submit = () => {
-    if (!email.includes("@") || pass.length < (isLogin ? 1 : 8) || (!isLogin && !user)) { setErr(true); return; }
-    setErr(false); alert(isLogin ? `Firebase login fires here.\nEmail: ${email}` : `Firebase signup fires here.\nUsername: ${user}\nEmail: ${email}`);
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [user, setUser] = useState("");
+  const [err, setErr] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email.includes("@") || pass.length < (isLogin ? 1 : 8) || (!isLogin && !user)) {
+      setErr(true);
+      setErrMsg(isLogin ? "Invalid email or password." : "Please fill in all fields correctly.");
+      return;
+    }
+    setErr(false);
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const result = await signInWithEmailAndPassword(auth, email, pass);
+        const firebaseUid = result.user.uid;
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firebaseUid }),
+        });
+        if (res.ok) {
+          window.location.href = "/feed";
+        } else {
+          setErr(true);
+          setErrMsg("Login failed. Please try again.");
+        }
+      } else {
+        const result = await createUserWithEmailAndPassword(auth, email, pass);
+        const firebaseUid = result.user.uid;
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firebaseUid,
+            email,
+            username: user.replace("@", ""),
+            anonName: user.startsWith("@") ? user : "@" + user,
+          }),
+        });
+        if (res.ok) {
+          window.location.href = "/feed";
+        } else {
+          const data = await res.json();
+          setErr(true);
+          setErrMsg(data.error || "Registration failed.");
+        }
+      }
+    } catch (error: any) {
+      setErr(true);
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+        setErrMsg("Invalid email or password.");
+      } else if (error.code === "auth/email-already-in-use") {
+        setErrMsg("Email already in use. Try logging in.");
+      } else if (error.code === "auth/weak-password") {
+        setErrMsg("Password must be at least 8 characters.");
+      } else {
+        setErrMsg("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
-  const inp: React.CSSProperties = { width: "100%", padding: "11px 13px", background: "rgba(255,255,255,.85)", border: `1.5px solid ${BORDER}`, borderRadius: 10, color: TEXT, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUid = result.user.uid;
+      const userEmail = result.user.email || "";
+      const displayName = result.user.displayName || "anonymous";
+      const anonName = "@" + displayName.toLowerCase().replace(/\s/g, "_");
+
+      // try login first
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firebaseUid }),
+      });
+
+      if (loginRes.ok) {
+        window.location.href = "/feed";
+        return;
+      }
+
+      // register if not found
+      const regRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firebaseUid,
+          email: userEmail,
+          username: displayName.toLowerCase().replace(/\s/g, "_"),
+          anonName,
+        }),
+      });
+
+      if (regRes.ok) {
+        window.location.href = "/feed";
+      }
+    } catch (error) {
+      console.error("Google auth error:", error);
+      setErr(true);
+      setErrMsg("Google sign in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "11px 13px", background: "rgba(255,255,255,.85)",
+    border: `1.5px solid ${BORDER}`, borderRadius: 10, color: TEXT, fontSize: 14,
+    outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <Navbar setScreen={setScreen} />
@@ -157,23 +274,43 @@ function AuthScreen({ mode, setScreen }: { mode: string; setScreen: (s: string) 
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", borderRadius: 10, background: "rgba(108,92,231,.08)", border: "1.5px solid rgba(108,92,231,.2)", fontSize: 12, color: A, marginBottom: 16, fontWeight: 500 }}>🔒 Your identity stays hidden to other users</div>
-          {err && <div style={{ padding: "9px 13px", borderRadius: 8, background: "#fbeaf0", border: "1.5px solid #f4c0d1", color: "#993556", fontSize: 12, marginBottom: 12 }}>{isLogin ? "Invalid email or password." : "Please fill in all fields correctly."}</div>}
-          {!isLogin && <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Username (shown publicly)</label><input style={inp} placeholder="@mystery_oracle" value={user} onChange={e => setUser(e.target.value)} /></div>}
-          <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Email</label><input style={inp} type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-          <div style={{ marginBottom: 16 }}><label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Password</label><input style={inp} type="password" placeholder={isLogin ? "••••••••" : "min. 8 characters"} value={pass} onChange={e => setPass(e.target.value)} /></div>
-          <motion.button onClick={submit} style={{ width: "100%", padding: 13, background: gradBg, border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 18px rgba(108,92,231,.3)" }}
-            whileHover={{ y: -1, boxShadow: "0 6px 24px rgba(108,92,231,.4)" }} whileTap={{ scale: 0.98 }}>
-            {isLogin ? "Log in to Splitt" : "Create my account →"}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", borderRadius: 10, background: "rgba(108,92,231,.08)", border: "1.5px solid rgba(108,92,231,.2)", fontSize: 12, color: A, marginBottom: 16, fontWeight: 500 }}>
+            🔒 Your identity stays hidden to other users
+          </div>
+          {err && (
+            <div style={{ padding: "9px 13px", borderRadius: 8, background: "#fbeaf0", border: "1.5px solid #f4c0d1", color: "#993556", fontSize: 12, marginBottom: 12 }}>
+              {errMsg}
+            </div>
+          )}
+          {!isLogin && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Username (shown publicly)</label>
+              <input style={inp} placeholder="@mystery_oracle" value={user} onChange={e => setUser(e.target.value)} />
+            </div>
+          )}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Email</label>
+            <input style={inp} type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 5 }}>Password</label>
+            <input style={inp} type="password" placeholder={isLogin ? "••••••••" : "min. 8 characters"} value={pass} onChange={e => setPass(e.target.value)} />
+          </div>
+          <motion.button onClick={handleSubmit} disabled={loading}
+            style={{ width: "100%", padding: 13, background: loading ? SURFACE2 : gradBg, border: "none", borderRadius: 12, color: loading ? MUTED : "#fff", fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer", fontFamily: "inherit", boxShadow: loading ? "none" : "0 4px 18px rgba(108,92,231,.3)" }}
+            whileHover={!loading ? { y: -1, boxShadow: "0 6px 24px rgba(108,92,231,.4)" } : {}} whileTap={!loading ? { scale: 0.98 } : {}}>
+            {loading ? "Please wait..." : isLogin ? "Log in to Splitt" : "Create my account →"}
           </motion.button>
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0", color: MUTED, fontSize: 12 }}>
             <span style={{ flex: 1, height: 1, background: BORDER }} />or<span style={{ flex: 1, height: 1, background: BORDER }} />
           </div>
-          <button onClick={() => alert("Firebase Google OAuth fires here.")} style={{ width: "100%", padding: 11, borderRadius: 10, background: "rgba(255,255,255,.85)", border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontFamily: "inherit", fontWeight: 500 }}>
+          <button onClick={handleGoogle} disabled={loading}
+            style={{ width: "100%", padding: 11, borderRadius: 10, background: "rgba(255,255,255,.85)", border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontFamily: "inherit", fontWeight: 500 }}>
             <GoogleIcon /> Continue with Google
           </button>
           <div style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: MUTED }}>
-            {isLogin ? <span>No account? <span style={{ color: A, fontWeight: 600, cursor: "pointer" }} onClick={() => setScreen("signup")}>Sign up free</span></span>
+            {isLogin
+              ? <span>No account? <span style={{ color: A, fontWeight: 600, cursor: "pointer" }} onClick={() => setScreen("signup")}>Sign up free</span></span>
               : <span>Already have an account? <span style={{ color: A, fontWeight: 600, cursor: "pointer" }} onClick={() => setScreen("login")}>Log in</span></span>}
           </div>
         </motion.div>
