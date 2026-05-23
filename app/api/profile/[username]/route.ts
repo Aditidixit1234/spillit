@@ -3,15 +3,17 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ) {
   try {
+    const { username } = await params;
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { username: params.username },
-          { anonName: params.username },
-          { anonName: `@${params.username}` },
+          { username },
+          { anonName: username },
+          { anonName: `@${username}` },
         ],
       },
       select: {
@@ -52,19 +54,13 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({ user }, { status: 200 });
   } catch (error) {
     console.error("Profile error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -75,16 +71,8 @@ export async function PUT(
   try {
     const { firebaseUid, bio, signature, aura } = await req.json();
 
-    const user = await prisma.user.findUnique({
-      where: { firebaseUid },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
+    const user = await prisma.user.findUnique({ where: { firebaseUid } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -94,9 +82,6 @@ export async function PUT(
     return NextResponse.json({ user: updated }, { status: 200 });
   } catch (error) {
     console.error("Update profile error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, use } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -94,48 +94,40 @@ function PostCard({ post, index }:{ post:any; index:number }) {
   const [hearts,setHearts]=useState(post.totalHearts||0);
   return (
     <motion.div ref={ref} initial={{ opacity:0, y:18 }} animate={inView?{opacity:1,y:0}:{}} transition={{ duration:0.35, delay:index*0.07 }}>
-      <motion.div style={{ ...glass(), borderRadius:16, padding:"1rem 1.2rem", marginBottom:10, cursor:"pointer", position:"relative", overflow:"hidden" }}
-        whileHover={{ y:-3, boxShadow:"0 12px 32px rgba(108,92,231,.13)" }} transition={{ duration:0.2 }}>
-        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:post.type==="prediction"?gradBg:"linear-gradient(180deg,#ef9f27,#f04aa0)", borderRadius:"16px 0 0 16px" }} />
-        <div style={{ paddingLeft:10 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
-            <span style={{ fontSize:10, background:post.type==="prediction"?"rgba(232,67,147,.1)":"rgba(239,159,39,.12)", color:post.type==="prediction"?A2:"#7a4a08", padding:"1px 8px", borderRadius:999, fontWeight:700 }}>{post.type}</span>
-            <span style={{ fontSize:10, color:MUTED, marginLeft:"auto" }}>{new Date(post.createdAt).toLocaleDateString()}</span>
+      <motion.a href={`/post/${post.id}`} style={{ textDecoration:"none", display:"block" }}>
+        <motion.div style={{ ...glass(), borderRadius:16, padding:"1rem 1.2rem", marginBottom:10, cursor:"pointer", position:"relative", overflow:"hidden" }}
+          whileHover={{ y:-3, boxShadow:"0 12px 32px rgba(108,92,231,.13)" }} transition={{ duration:0.2 }}>
+          <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:post.type==="prediction"?gradBg:"linear-gradient(180deg,#ef9f27,#f04aa0)", borderRadius:"16px 0 0 16px" }} />
+          <div style={{ paddingLeft:10 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+              <span style={{ fontSize:10, background:post.type==="prediction"?"rgba(232,67,147,.1)":"rgba(239,159,39,.12)", color:post.type==="prediction"?A2:"#7a4a08", padding:"1px 8px", borderRadius:999, fontWeight:700 }}>{post.type}</span>
+              <span style={{ fontSize:10, color:MUTED, marginLeft:"auto" }}>{new Date(post.createdAt).toLocaleDateString()}</span>
+            </div>
+            <p style={{ fontSize:13, lineHeight:1.6, color:TEXT, marginBottom:7 }}>{post.text}</p>
+            <div style={{ display:"flex", gap:5, marginBottom:7 }}>
+              {post.tags?.map((t:string)=><span key={t} style={{ fontSize:11, color:A, fontWeight:600, padding:"2px 8px", borderRadius:999, background:"rgba(108,92,231,.08)" }}>{t}</span>)}
+            </div>
+            <div style={{ display:"flex", gap:10, paddingTop:7, borderTop:`1px solid ${BORDER}` }}>
+              {post.totalVotes>0&&<span style={{ fontSize:11, color:MUTED }}>🗳️ {post.totalVotes}</span>}
+              <span style={{ fontSize:11, color:MUTED }}>💬 {post.totalComments||0}</span>
+              <motion.button onClick={e=>{ e.preventDefault(); setHearted(h=>!h); setHearts((h:number)=>hearted?h-1:h+1); }}
+                style={{ display:"flex", alignItems:"center", gap:4, padding:"2px 8px", borderRadius:8, border:"none", background:hearted?"rgba(232,67,147,.08)":"transparent", color:hearted?A2:MUTED, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}
+                whileTap={{ scale:0.85 }}>
+                {hearted?"❤️":"🤍"} {hearts}
+              </motion.button>
+            </div>
           </div>
-          <p style={{ fontSize:13, lineHeight:1.6, color:TEXT, marginBottom:7 }}>{post.text}</p>
-          <div style={{ display:"flex", gap:5, marginBottom:7 }}>
-            {post.tags?.map((t:string)=><span key={t} style={{ fontSize:11, color:A, fontWeight:600, padding:"2px 8px", borderRadius:999, background:"rgba(108,92,231,.08)" }}>{t}</span>)}
-          </div>
-          <div style={{ display:"flex", gap:10, paddingTop:7, borderTop:`1px solid ${BORDER}` }}>
-            {post.totalVotes>0&&<span style={{ fontSize:11, color:MUTED }}>🗳️ {post.totalVotes}</span>}
-            <span style={{ fontSize:11, color:MUTED }}>💬 {post.totalComments||0}</span>
-            <motion.button onClick={()=>{ setHearted(h=>!h); setHearts((h:number)=>hearted?h-1:h+1); }}
-              style={{ display:"flex", alignItems:"center", gap:4, padding:"2px 8px", borderRadius:8, border:"none", background:hearted?"rgba(232,67,147,.08)":"transparent", color:hearted?A2:MUTED, fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}
-              whileTap={{ scale:0.85 }}>
-              {hearted?"❤️":"🤍"} {hearts}
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </motion.a>
     </motion.div>
   );
 }
 
-function SkeletonCard() {
-  return (
-    <div style={{ ...glass(), borderRadius:16, padding:"1rem 1.2rem", marginBottom:10 }}>
-      {[80,60,40].map((w,i)=>(
-        <motion.div key={i} animate={{ opacity:[0.4,0.7,0.4] }} transition={{ duration:1.5, repeat:Infinity, delay:i*0.1 }}
-          style={{ height:12, borderRadius:999, background:SURFACE2, width:`${w}%`, marginBottom:8 }} />
-      ))}
-    </div>
-  );
-}
-
-export default function ProfilePage({ params }:{ params:{ username:string } }) {
-  const [user, setUser]     = useState<any>(null);
+export default function ProfilePage({ params: paramsPromise }:{ params: Promise<{ username:string }> }) {
+  const params = use(paramsPromise);
+  const [user, setUser]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]       = useState("Posts");
+  const [tab, setTab]         = useState("Posts");
   const tabs = ["Posts","Predictions","Confessions"];
 
   useEffect(()=>{
@@ -174,6 +166,7 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
       <div style={{ textAlign:"center", padding:"5rem", color:MUTED }}>
         <div style={{ fontSize:40, marginBottom:12 }}>👤</div>
         <div style={{ fontFamily:"'Syne',sans-serif", fontSize:18, fontWeight:800 }}>User not found</div>
+        <div style={{ fontSize:13, marginTop:8 }}>Try: /profile/yourusername</div>
       </div>
     </div>
   );
@@ -184,31 +177,28 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
       <div style={{ position:"relative", zIndex:1 }}>
         <Navbar />
 
-        {/* banner */}
         <div style={{ height:160, background:"linear-gradient(135deg,rgba(108,92,231,.18),rgba(232,67,147,.14))", position:"relative", overflow:"hidden" }}>
           <motion.div animate={{ x:[0,30,0], y:[0,-10,0] }} transition={{ duration:8, repeat:Infinity }}
             style={{ position:"absolute", width:300, height:300, borderRadius:"50%", background:"rgba(108,92,231,.12)", filter:"blur(50px)", top:-80, right:-50 }} />
         </div>
 
         <div style={{ maxWidth:980, margin:"0 auto", padding:"0 1.5rem" }}>
-          {/* profile header */}
           <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginTop:-40, marginBottom:14, flexWrap:"wrap", gap:10 }}>
             <div style={{ display:"flex", alignItems:"flex-end", gap:16 }}>
               <motion.div initial={{ scale:0.8, opacity:0 }} animate={{ scale:1, opacity:1 }} transition={{ duration:0.4, type:"spring" }}
                 style={{ width:80, height:80, borderRadius:"50%", background:gradBg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, fontWeight:700, color:"#fff", border:`3px solid ${SURFACE}`, boxShadow:"0 4px 20px rgba(108,92,231,.3)" }}>?</motion.div>
               <div style={{ paddingBottom:8 }}>
                 <div style={{ fontFamily:"'Syne',sans-serif", fontSize:20, fontWeight:800, color:TEXT }}>{user.anonName}</div>
-                <div style={{ fontSize:11, color:MUTED }}>{user.level} · Rank #{user.rank || "—"} · Joined {new Date(user.createdAt).toLocaleDateString("en",{month:"long",year:"numeric"})}</div>
+                <div style={{ fontSize:11, color:MUTED }}>{user.level} · Rank #{user.rank||"—"} · Joined {new Date(user.createdAt).toLocaleDateString("en",{month:"long",year:"numeric"})}</div>
                 {user.signature && <div style={{ fontSize:12, color:MUTED, fontStyle:"italic", marginTop:4 }}>"{user.signature}"</div>}
               </div>
             </div>
-            <motion.a href="/create" style={{ padding:"8px 18px", borderRadius:10, background:gradBg, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", textDecoration:"none", boxShadow:"0 4px 14px rgba(108,92,231,.3)", paddingBottom:8 }}
+            <motion.a href="/create" style={{ padding:"8px 18px", borderRadius:10, background:gradBg, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", textDecoration:"none", boxShadow:"0 4px 14px rgba(108,92,231,.3)", paddingBottom:"8px" }}
               whileHover={{ y:-1 }}>+ New post</motion.a>
           </div>
 
           {user.bio && <p style={{ fontSize:13, color:MUTED, lineHeight:1.7, maxWidth:560, marginBottom:14 }}>{user.bio}</p>}
 
-          {/* badges */}
           {user.badges?.length>0 && (
             <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
               {user.badges.map((b:string,i:number)=>(
@@ -225,13 +215,12 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
 
           {/* LEFT */}
           <div>
-            {/* stat cards */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:16 }}>
               {[
-                { val:user.rep?.toLocaleString()||"0",  label:"Rep score",   color:A,         icon:"⚡" },
-                { val:`${Math.round(user.accuracy||0)}%`, label:"Accuracy",  color:A2,        icon:"🎯" },
-                { val:user.totalPredictions||0,          label:"Predictions",color:A,         icon:"🔮" },
-                { val:`${user.streak||0}🔥`,              label:"Streak",    color:"#e67e22", icon:""   },
+                { val:user.rep?.toLocaleString()||"0",    label:"Rep score",   color:A,         icon:"⚡" },
+                { val:`${Math.round(user.accuracy||0)}%`, label:"Accuracy",    color:A2,        icon:"🎯" },
+                { val:user.totalPredictions||0,           label:"Predictions", color:A,         icon:"🔮" },
+                { val:`${user.streak||0}🔥`,               label:"Streak",     color:"#e67e22", icon:"" },
               ].map((s,i)=>(
                 <motion.div key={s.label} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35, delay:i*0.07 }}>
                   <motion.div style={{ ...glass(), borderRadius:14, padding:"0.9rem 1rem", textAlign:"center" }}
@@ -244,7 +233,6 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
               ))}
             </div>
 
-            {/* tabs */}
             <div style={{ display:"flex", borderBottom:`1.5px solid ${BORDER}`, marginBottom:12, position:"relative" }}>
               {tabs.map(t=>(
                 <motion.button key={t} onClick={()=>setTab(t)}
@@ -270,8 +258,6 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
 
           {/* RIGHT */}
           <div style={{ position:"sticky", top:72, display:"flex", flexDirection:"column", gap:12 }}>
-
-            {/* accuracy ring */}
             <motion.div initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }}
               style={{ ...glass(), borderRadius:18, padding:"1.1rem 1.2rem" }}>
               <div style={{ fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:800, marginBottom:10 }}>🎯 Prediction record</div>
@@ -297,21 +283,19 @@ export default function ProfilePage({ params }:{ params:{ username:string } }) {
               </div>
             </motion.div>
 
-            {/* heatmap */}
-            <motion.div initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.18 }}
+            <motion.div initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.16 }}
               style={{ ...glass(), borderRadius:18, padding:"1.1rem 1.2rem" }}>
               <div style={{ fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:800, marginBottom:10 }}>📊 Activity</div>
               <Heatmap />
             </motion.div>
 
-            {/* streak */}
             <motion.div initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.22 }}
               style={{ ...glass(), borderRadius:18, padding:"1.1rem 1.2rem" }}>
               <div style={{ fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:800, marginBottom:10 }}>🔥 Streak</div>
               <div style={{ display:"flex", gap:4 }}>
                 {Array.from({length:7}).map((_,i)=>(
                   <motion.div key={i} initial={{ scale:0 }} animate={{ scale:1 }} transition={{ delay:0.3+i*0.05, type:"spring" }}
-                    style={{ flex:1, height:28, borderRadius:8, background: i<(user.streak||0) ? gradBg : SURFACE2, border:`1px solid ${BORDER}` }} />
+                    style={{ flex:1, height:28, borderRadius:8, background:i<(user.streak||0)?gradBg:SURFACE2, border:`1px solid ${BORDER}` }} />
                 ))}
               </div>
               <div style={{ fontSize:11, color:MUTED, marginTop:8 }}>{user.streak||0} day streak</div>

@@ -134,7 +134,7 @@ function PostCard({ post, index, currentUser }:{ post:any; index:number; current
                 : <span style={{ fontSize:10, background:"rgba(239,159,39,.1)", color:"#7a4a08", padding:"1px 8px", borderRadius:999, fontWeight:700 }}>confession</span>}
             </div>
             <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>
-              {new Date(post.createdAt).toRelative?.() || new Date(post.createdAt).toLocaleDateString()} · Rep: {post.author?.rep?.toLocaleString() || 0}
+              {new Date(post.createdAt).toLocaleDateString()} · Rep: {post.author?.rep?.toLocaleString() || 0}
             </div>
           </div>
           <span style={{ fontSize:16, color:MUTED, cursor:"pointer", letterSpacing:2 }}>···</span>
