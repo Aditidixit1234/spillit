@@ -6,8 +6,14 @@ export async function GET(
   { params }: { params: { username: string } }
 ) {
   try {
-    const user = await prisma.user.findUnique({
-  where: { username: params.username },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: params.username },
+          { anonName: params.username },
+          { anonName: `@${params.username}` },
+        ],
+      },
       select: {
         id: true,
         anonName: true,
@@ -62,10 +68,9 @@ export async function GET(
   }
 }
 
-// UPDATE profile
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { username: string } }
+  _ctx: unknown
 ) {
   try {
     const { firebaseUid, bio, signature, aura } = await req.json();
