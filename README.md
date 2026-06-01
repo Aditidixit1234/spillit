@@ -1,41 +1,57 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpillIt – Anonymous Social Discussion Platform
 
-## Getting Started
+A modern anonymous discussion platform where users can share thoughts, participate in communities, react to posts, and engage in real-time conversations while maintaining privacy.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+* Anonymous posting system
+* User authentication with Firebase
+* Community-based discussions
+* Upvote and downvote system
+* Comment and reply threads
+* Real-time notifications
+* User profiles and activity history
+* Content moderation dashboard
+* Cloudinary image uploads
+* Responsive mobile-first design
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Frontend
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* Next.js
+* TypeScript
+* Tailwind CSS
+* ShadCN UI
 
-## Learn More
+### Backend
 
-To learn more about Next.js, take a look at the following resources:
+* Next.js API Routes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* MongoDB Atlas
 
-## Deploy on Vercel
+### Authentication
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+* Firebase Authentication
+* Google Sign-In
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# spillit
-Real-time anonymous social platform frontend featuring gamified polls, trending feeds, and modern glassmorphism UI.
->>>>>>> 05c34e4bb10f094c407a3e82d78113b87b89b5d5
+### Media Storage
+
+* Cloudinary
+
+## Key Highlights
+
+* Secure authentication flow
+* Optimized MongoDB schema design
+* Real-time user interactions
+* Scalable architecture
+
+## Future Enhancements
+
+* AI-powered content moderation
+* Community recommendation engine
+* Sentiment analysis
+* Personalized feed ranking
+
