@@ -1,7 +1,7 @@
-# SpillIt – Anonymous Social Discussion Platform
+<img width="958" height="422" alt="image" src="https://github.com/user-attachments/assets/65953b6e-49be-4033-b600-657e132e69a2" /># SpillIt – Anonymous Social Discussion Platform
 
 A modern anonymous discussion platform where users can share thoughts, participate in communities, react to posts, and engage in real-time conversations while maintaining privacy.
-
+Testing update
 ## Features
 
 * Anonymous posting system
